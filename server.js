@@ -3,9 +3,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
 // Import new scrapers
-const { searchFzMovies, getFzMovieDetails } = require('./scrapers/fzmovies');
-const { searchO2TvSeries, getO2TvSeriesDetails } = require('./scrapers/o2tvseries');
-const { searchNaijaPrey, getNaijaPreyDetails } = require('./scrapers/naijaprey');
+const { searchFzMovies, getFzMovieDetails, getLatestFzMovies } = require('./scrapers/fzmovies');
+const { searchO2TvSeries, getO2TvSeriesDetails, getLatestO2TvSeries } = require('./scrapers/o2tvseries');
+const { searchNaijaPrey, getNaijaPreyDetails, getLatestNaijaPrey } = require('./scrapers/naijaprey');
+const { getLatestThenkiri } = require('./scrapers/thenkiri');
 
 const app = express();
 const PORT = 3000;
@@ -73,6 +74,9 @@ app.get('/api/movies', async (req, res) => {
             'korean': 'https://thenkiri.com/category/asian-movies/download-korean-movies/',
             'bollywood': 'https://thenkiri.com/category/asian-movies/download-bollywood-movies/',
             'animation': 'https://nkiri.ink/tag/animation/',
+            'nollywood': 'https://thenkiri.ng/category/nollywood/',
+            'southafrica': 'https://thenkiri.ng/category/south-africa/',
+            'adult': 'https://thenkiri.ng/adult-archives/',
         };
 
         let url = categoryUrls[category] || categoryUrls['home'];
@@ -86,41 +90,63 @@ app.get('/api/movies', async (req, res) => {
             }
         }
 
-        const response = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
+        let movies = [];
 
-        const $ = cheerio.load(response.data);
-        const movies = [];
+        if (category === 'home' && page === 1) {
+            // Aggregate from all sources for the homepage
+            const results = await Promise.allSettled([
+                getLatestThenkiri('https://thenkiri.com/'),
+                getLatestThenkiri('https://thenkiri.ng/'),
+                getLatestFzMovies(),
+                getLatestO2TvSeries(),
+                getLatestNaijaPrey()
+            ]);
 
-        // Parse movie/drama items
-        $('article').each((index, element) => {
-            const $article = $(element);
-            const $title = $article.find('h2 a, h5 a').first();
-            const $image = $article.find('img').first();
-
-            if ($title.length) {
-                const title = $title.text().trim();
-                const movieUrl = $title.attr('href');
-                let imageUrl = $image.attr('src') || $image.attr('data-src') || '';
-
-                // Handle lazy-loaded images
-                if (!imageUrl || imageUrl.includes('lazy')) {
-                    imageUrl = $image.attr('data-lazy-src') || $image.attr('data-src') || '';
+            results.forEach(res => {
+                if (res.status === 'fulfilled') {
+                    movies = movies.concat(res.value);
                 }
+            });
 
-                if (movieUrl && title) {
-                    movies.push({
-                        title,
-                        url: movieUrl,
-                        image: imageUrl,
-                        id: movieUrl.split('/').filter(Boolean).pop()
-                    });
+            // Shuffle results for variety
+            movies = movies.sort(() => Math.random() - 0.5);
+        } else {
+            const response = await axios.get(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
-            }
-        });
+            });
+
+            const $ = cheerio.load(response.data);
+
+            // Parse movie/drama items
+            $('article').each((index, element) => {
+                const $article = $(element);
+                const $title = $article.find('h2 a, h5 a').first();
+                const $image = $article.find('img').first();
+
+                if ($title.length) {
+                    const title = $title.text().trim();
+                    const movieUrl = $title.attr('href');
+                    let imageUrl = $image.attr('src') || $image.attr('data-src') || '';
+
+                    // Handle lazy-loaded images
+                    if (!imageUrl || imageUrl.includes('lazy')) {
+                        imageUrl = $image.attr('data-lazy-src') || $image.attr('data-src') || '';
+                    }
+
+                    if (movieUrl && title) {
+                        movies.push({
+                            title,
+                            url: movieUrl,
+                            image: imageUrl,
+                            id: movieUrl.split('/').filter(Boolean).pop(),
+                            source: url.includes('.ng') ? 'thenkiri.ng' : 'thenkiri'
+                        });
+                    }
+                }
+            });
+        }
 
         // Cache the results
         setCachedData(cacheKey, movies);
@@ -159,8 +185,8 @@ app.get('/api/movie/:id', async (req, res) => {
             movieData = await getO2TvSeriesDetails(movieUrl);
         } else if (source === 'naijaprey') {
             movieData = await getNaijaPreyDetails(movieUrl);
-        } else {
-            // Default TheNkiri scraper
+        } else if (source === 'thenkiri.ng' || source === 'thenkiri') {
+            // Both .com and .ng use same structure mostly
             const response = await axios.get(movieUrl, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -303,7 +329,7 @@ app.get('/api/movie/:id', async (req, res) => {
                     image,
                     genres: genres.slice(0, 5),
                     url: movieUrl,
-                    source: 'thenkiri'
+                    source: source === 'thenkiri.ng' ? 'thenkiri.ng' : 'thenkiri'
                 };
             }
         }
@@ -335,6 +361,7 @@ app.get('/api/search', async (req, res) => {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
             }),
+            getLatestThenkiri('https://thenkiri.ng/'), // Search .ng too
             searchFzMovies(query),
             searchO2TvSeries(query),
             searchNaijaPrey(query)
@@ -366,10 +393,14 @@ app.get('/api/search', async (req, res) => {
             });
         }
 
-        // Aggregate results from FzMovies, O2TvSeries, and NaijaPrey
+        // Aggregate results from FzMovies, O2TvSeries, NaijaPrey, and Thenkiri.ng
         if (fzMovies.status === 'fulfilled') movies = movies.concat(fzMovies.value);
         if (o2TvSeries.status === 'fulfilled') movies = movies.concat(o2TvSeries.value);
         if (naijaPrey.status === 'fulfilled') movies = movies.concat(naijaPrey.value);
+        if (nkiriResponse.status === 'fulfilled' && Array.isArray(nkiriResponse.value)) {
+             // If nkiriResponse returned an array (from getLatestThenkiri call in search)
+             movies = movies.concat(nkiriResponse.value);
+        }
 
         res.json({ success: true, movies, query });
     } catch (error) {

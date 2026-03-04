@@ -149,6 +149,9 @@
                 { id: 'movies', name: 'Movies' },
                 { id: 'kdrama', name: 'K-Drama' },
                 { id: 'series', name: 'TV Series' },
+                { id: 'nollywood', name: 'Nollywood' },
+                { id: 'southafrica', name: 'South Africa' },
+                { id: 'adult', name: 'Adult (18+)' },
                 { id: 'animation', name: 'Animations' },
                 { id: 'korean', name: 'Korean Movies' },
                 { id: 'bollywood', name: 'Bollywood' },
@@ -451,7 +454,8 @@
                                                 <span className={`text-[10px] font-bold px-2 py-1 rounded shadow-md uppercase ${movie.source === 'fzmovies' ? 'bg-[#ff9900] text-black' :
                                                     movie.source === 'o2tvseries' ? 'bg-[#007bff] text-white' :
                                                         movie.source === 'naijaprey' ? 'bg-[#10b981] text-white' :
-                                                            'bg-[#e50914] text-white'
+                                                            movie.source === 'thenkiri.ng' ? 'bg-[#833ab4] text-white' :
+                                                                'bg-[#e50914] text-white'
                                                     }`}>
                                                     {movie.source || 'thenkiri'}
                                                 </span>

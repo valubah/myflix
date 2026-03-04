@@ -134,4 +134,37 @@ async function getO2TvSeriesDetails(seriesUrl) {
     }
 }
 
-module.exports = { searchO2TvSeries, getO2TvSeriesDetails };
+async function getLatestO2TvSeries() {
+    try {
+        const { data } = await scraper.get('https://o2tvseries.app');
+        const $ = cheerio.load(data);
+        const movies = [];
+
+        $('div.data, div.data_list, a').each((i, el) => {
+            const $el = $(el);
+            let title = $el.text().trim();
+            let url = $el.attr('href') || $el.find('a').attr('href');
+
+            if (url && url.includes('/') && title && title.length > 3 && !title.includes('Download') && !title.includes('Home')) {
+                const fullUrl = url.startsWith('http') ? url : `https://o2tvseries.app${url.startsWith('/') ? '' : '/'}${url}`;
+
+                if (!movies.find(m => m.url === fullUrl)) {
+                    movies.push({
+                        id: Buffer.from(fullUrl).toString('base64'),
+                        title: title,
+                        url: fullUrl,
+                        image: 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=O2TvSeries',
+                        source: 'o2tvseries'
+                    });
+                }
+            }
+        });
+
+        return movies.slice(0, 10);
+    } catch (error) {
+        console.error('O2TvSeries Latest Error:', error.message);
+        return [];
+    }
+}
+
+module.exports = { searchO2TvSeries, getO2TvSeriesDetails, getLatestO2TvSeries };

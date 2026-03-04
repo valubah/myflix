@@ -140,4 +140,40 @@ async function getFzMovieDetails(movieUrl) {
     }
 }
 
-module.exports = { searchFzMovies, getFzMovieDetails };
+async function getLatestFzMovies() {
+    try {
+        const { data } = await scraper.get('https://www.fzmovies.net/');
+        const $ = cheerio.load(data);
+        const movies = [];
+
+        $('.moviefilm').each((i, el) => {
+            const $movie = $(el);
+            const titleElement = $movie.find('a').first();
+            const title = titleElement.text().trim();
+            const url = titleElement.attr('href');
+            let image = $movie.find('img').attr('src');
+
+            if (url && title) {
+                const fullUrl = url.startsWith('http') ? url : `https://www.fzmovies.net/${url}`;
+                if (image && !image.startsWith('http')) {
+                    image = `https://www.fzmovies.net/${image}`;
+                }
+
+                movies.push({
+                    id: Buffer.from(fullUrl).toString('base64'),
+                    title: title.replace('...', '').trim(),
+                    url: fullUrl,
+                    image: image || 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=FzMovies',
+                    source: 'fzmovies'
+                });
+            }
+        });
+
+        return movies.slice(0, 10);
+    } catch (error) {
+        console.error('FzMovies Latest Error:', error.message);
+        return [];
+    }
+}
+
+module.exports = { searchFzMovies, getFzMovieDetails, getLatestFzMovies };
