@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const cors = require('cors');
 // Import new scrapers
 const { searchFzMovies, getFzMovieDetails } = require('./scrapers/fzmovies');
 const { searchO2TvSeries, getO2TvSeriesDetails } = require('./scrapers/o2tvseries');
