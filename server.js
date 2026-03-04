@@ -102,6 +102,10 @@ app.get('/api/movies', async (req, res) => {
                 const { searchThenkiri } = require('./scrapers/thenkiri');
                 movies = await searchThenkiri('https://thenkiri.ng/', 'Filipino');
             }
+        } else if (category === 'adult') {
+            // Special handling for adult category to ensure Filipino content
+            const { searchThenkiri } = require('./scrapers/thenkiri');
+            movies = await searchThenkiri('https://thenkiri.ng/', 'Filipino');
         } else if (category === 'home' && page === 1) {
             // Default home aggregation if no source specified
             const results = await Promise.allSettled([

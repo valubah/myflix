@@ -62,38 +62,57 @@ async function getNaijaPreyDetails(movieUrl) {
 
         const downloadLinks = [];
         const seenLinks = new Set();
-        const blacklist = ['movies', 'series', 'adult', 'animation', 'crime', 'hollywood', 'action', 'adventure', 'comedy', 'drama', 'horror', 'thriller', 'romance', 'sci-fi', 'fantasy', 'mystery', 'documentary', 'biography', 'history', 'war', 'western', 'musical', 'music', 'family', 'sport', 'news', 'reality-tv', 'talk-show', 'game-show'];
+        const blacklist = [
+            'movies', 'series', 'adult', 'animation', 'crime', 'hollywood', 'action',
+            'adventure', 'comedy', 'drama', 'horror', 'thriller', 'romance', 'sci-fi',
+            'fantasy', 'mystery', 'documentary', 'biography', 'history', 'war',
+            'western', 'musical', 'music', 'family', 'sport', 'news', 'reality-tv',
+            'talk-show', 'game-show', 'nollywood', 'indian', 'korean', 'chinese',
+            'view all', 'learn how to download', 'telegram', 'facebook', 'twitter',
+            'whatsapp', 'instagram', 'youtube', 'contact'
+        ];
 
-        $('a[href*="download"], a[href*=".mp4"], a[href*=".mkv"], a.btn, a.download-button').each((i, el) => {
+        $('a').each((i, el) => {
             const $link = $(el);
-            let text = $link.text().trim();
+            let linkText = $link.text().trim();
+            let textLower = linkText.toLowerCase();
             const href = $link.attr('href');
 
-            if (!href) return;
+            if (!href || !href.startsWith('http')) return;
 
-            // Filter out internal site navigation and ads
-            if (href.includes('google') || href.includes('ads') || href.includes('t.me') || href.includes('facebook') || href.includes('twitter') || href.includes('whatsapp')) return;
+            // Filter out internal site navigation and social/ads
+            if (href.includes('google') || href.includes('ads') || href.includes('t.me') ||
+                href.includes('facebook') || href.includes('twitter') || href.includes('whatsapp') ||
+                href.includes('instagram') || href.includes('youtube') || href.includes('/category/')) return;
 
-            // Filter out category links based on text
-            if (blacklist.some(word => text.toLowerCase() === word)) return;
+            // Filter out category links and help links based on text
+            if (blacklist.some(word => textLower === word || textLower.includes(word))) {
+                // If it's a very short text, it's likely a category link
+                if (textLower.length < 20 && !textLower.includes('episode') && !textLower.includes('server')) {
+                    return;
+                }
+            }
 
-            // Filter out links that are just categories in the URL
-            if (href.includes('/category/')) return;
+            const isDownloadHost = href.includes('sabishares.com') || href.includes('sabimesh.com') ||
+                href.includes('downloadwella.com') || href.includes('mediafire.com') ||
+                href.includes('mega.nz') || href.includes('drive.google.com') ||
+                href.includes('naijaprey.tv/download');
 
-            const fullUrl = href.startsWith('http') ? href : `https://naijaprey.tv/${href.startsWith('/') ? href.substring(1) : href}`;
+            const isFileLink = href.match(/\.(mp4|mkv|avi|zip|rar)$/i);
+            const isDownloadText = textLower.includes('download') || textLower.includes('server') || textLower.includes('episode') || textLower.includes('quality');
 
-            if (!seenLinks.has(fullUrl)) {
-                seenLinks.add(fullUrl);
+            if ((isDownloadHost || isFileLink || isDownloadText) && !seenLinks.has(href)) {
+                seenLinks.add(href);
 
                 let quality = 'Standard';
-                if (text.toLowerCase().includes('1080p') || fullUrl.includes('1080')) quality = '1080p';
-                else if (text.toLowerCase().includes('720p') || fullUrl.includes('720')) quality = '720p';
+                if (textLower.includes('1080p') || href.includes('1080')) quality = '1080p';
+                else if (textLower.includes('720p') || href.includes('720')) quality = '720p';
 
                 downloadLinks.push({
-                    text: text || 'Download Now',
-                    url: fullUrl,
+                    text: linkText || 'Download Now',
+                    url: href,
                     quality,
-                    group: 'NaijaPrey Fast Download'
+                    group: 'NaijaPrey Download'
                 });
             }
         });

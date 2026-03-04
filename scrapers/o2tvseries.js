@@ -147,14 +147,17 @@ async function getLatestO2TvSeries(page = 1) {
             let url = $el.attr('href') || $el.find('a').attr('href');
 
             if (url && url.includes('/') && title && title.length > 3 && !title.includes('Download') && !title.includes('Home')) {
-                const fullUrl = url.startsWith('http') ? url : `https://o2tvseries.app${url.startsWith('/') ? '' : '/'}${url}`;
+                const fullUrl = url.startsWith('http') ? url : `https://o2tvseries2.com${url.startsWith('/') ? '' : '/'}${url}`;
 
                 if (!movies.find(m => m.url === fullUrl)) {
+                    // Premium branded placeholder for O2TvSeries
+                    const placeholder = `https://via.placeholder.com/400x600/121212/e50914?text=O2TvSeries+%7C+${encodeURIComponent(title.split(' ').slice(0, 3).join('+'))}`;
+
                     movies.push({
                         id: Buffer.from(fullUrl).toString('base64'),
                         title: title,
                         url: fullUrl,
-                        image: 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=O2TvSeries',
+                        image: placeholder,
                         source: 'o2tvseries'
                     });
                 }
