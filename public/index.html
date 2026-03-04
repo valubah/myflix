@@ -4,7 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheNkiri - Download Movies & Series</title>
+    <title>Download Free Movies Without Ads - TheNkiri, FzMovies & O2TvSeries</title>
+    <meta name="description"
+        content="Download the latest Hollywood, Bollywood, Korean dramas, and TV series in HD quality for free. No ads, just direct download links from sources like TheNkiri, FzMovies, and O2TvSeries.">
+    <meta name="keywords"
+        content="free movies, download free movies, nkiri, theinkiri, fzmovies, o2tvseries, hollywood movies download, bollywood movies download, kdrama download, free series download, no ads movies">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Download Free Movies Without Ads - TheNkiri, FzMovies & O2TvSeries">
+    <meta property="og:description"
+        content="Download the latest Hollywood, Bollywood, Korean dramas, and TV series in HD quality for free. No ads, just direct download links.">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200">
+    <meta property="og:url" content="https://thenkiri.netlify.app">
+    <meta name="twitter:card" content="summary_large_image">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -194,7 +205,8 @@
                 setLoadingDetails(true);
                 setMovieDetails(null);
                 try {
-                    const response = await fetch(`${API_URL}/movie/${movie.id}?url=${encodeURIComponent(movie.url)}`);
+                    const source = movie.source || 'thenkiri';
+                    const response = await fetch(`${API_URL}/movie/${movie.id}?url=${encodeURIComponent(movie.url)}&source=${source}`);
                     const data = await response.json();
 
                     if (data.success) {
@@ -334,10 +346,10 @@
                     <div className="hero-banner flex items-center px-4 md:px-12 pt-32 pb-12">
                         <div className="max-w-2xl">
                             <h2 className="text-5xl md:text-7xl font-bold mb-4">
-                                Unlimited Movies & Series
+                                Download Free Movies Without Ads
                             </h2>
                             <p className="text-lg md:text-xl mb-6 text-gray-300">
-                                Download the latest Hollywood, Bollywood, Korean dramas, and TV series in HD quality.
+                                Get direct download links for the latest Hollywood, Bollywood, Korean dramas, and TV series in HD quality. Sourced from TheNkiri, FzMovies & O2TvSeries with <b>zero annoying popups</b>!
                             </p>
                             <div className="flex flex-wrap gap-4">
                                 <button
@@ -434,6 +446,14 @@
                                                     e.target.src = 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=No+Image';
                                                 }}
                                             />
+                                            <div className="absolute top-2 right-2">
+                                                <span className={`text-[10px] font-bold px-2 py-1 rounded shadow-md uppercase ${movie.source === 'fzmovies' ? 'bg-[#ff9900] text-black' :
+                                                        movie.source === 'o2tvseries' ? 'bg-[#007bff] text-white' :
+                                                            'bg-[#e50914] text-white'
+                                                    }`}>
+                                                    {movie.source || 'thenkiri'}
+                                                </span>
+                                            </div>
                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <div className="text-center">
                                                     <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

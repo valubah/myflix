@@ -3,6 +3,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
 
+// Import new scrapers
+const { searchFzMovies, getFzMovieDetails } = require('./scrapers/fzmovies');
+const { searchO2TvSeries, getO2TvSeriesDetails } = require('./scrapers/o2tvseries');
+
 const app = express();
 const PORT = 3000;
 
@@ -138,7 +142,8 @@ app.get('/api/movie/:id', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Movie URL is required' });
         }
 
-        const cacheKey = `movie_${movieId}`;
+        const source = req.query.source || 'thenkiri'; // Identify scraper to use
+        const cacheKey = `movie_${source}_${movieId}`;
 
         // Check cache first
         const cachedData = getCachedData(cacheKey);
@@ -146,158 +151,169 @@ app.get('/api/movie/:id', async (req, res) => {
             return res.json({ success: true, movie: cachedData, cached: true });
         }
 
-        const response = await axios.get(movieUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
+        let movieData;
 
-        const $ = cheerio.load(response.data);
-
-        // Extract movie details
-        const title = $('h1').first().text().trim() || $('title').text().trim();
-
-        // Enhanced synopsis extraction
-        let synopsis = '';
-        const synopsisHeader = $('h2:contains("Synopsis"), h3:contains("Synopsis"), p strong:contains("Synopsis")').first();
-        if (synopsisHeader.length) {
-            let current = synopsisHeader.parent().is('h2, h3') ? synopsisHeader : synopsisHeader.parent();
-            current = current.next();
-            while (current.length && !current.is('h2, h3, div.elementor-widget')) {
-                if (current.is('p')) {
-                    const text = current.text().trim();
-                    if (text && !text.toLowerCase().includes('download')) {
-                        synopsis += text + '\n\n';
-                    }
+        if (source === 'fzmovies') {
+            movieData = await getFzMovieDetails(movieUrl);
+        } else if (source === 'o2tvseries') {
+            movieData = await getO2TvSeriesDetails(movieUrl);
+        } else {
+            // Default TheNkiri scraper
+            const response = await axios.get(movieUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
+            });
+
+            const $ = cheerio.load(response.data);
+
+            // Extract movie details
+            const title = $('h1').first().text().trim() || $('title').text().trim();
+
+            // Enhanced synopsis extraction
+            let synopsis = '';
+            const synopsisHeader = $('h2:contains("Synopsis"), h3:contains("Synopsis"), p strong:contains("Synopsis")').first();
+            if (synopsisHeader.length) {
+                let current = synopsisHeader.parent().is('h2, h3') ? synopsisHeader : synopsisHeader.parent();
                 current = current.next();
-            }
-        }
-
-        if (!synopsis) {
-            synopsis = $('.entry-content p').first().text().trim();
-        }
-
-        // Extract trailer
-        let trailerUrl = '';
-        const videoWidget = $('.elementor-widget-video').first();
-        if (videoWidget.length) {
-            try {
-                const settings = JSON.parse(videoWidget.attr('data-settings') || '{}');
-                if (settings.youtube_url) {
-                    trailerUrl = settings.youtube_url;
-                }
-            } catch (e) {
-                console.error('Error parsing video settings:', e.message);
-            }
-        }
-
-        if (!trailerUrl) {
-            const ytIframe = $('iframe[src*="youtube.com"], iframe[src*="youtu.be"]').first();
-            if (ytIframe.length) {
-                trailerUrl = ytIframe.attr('src');
-            }
-        }
-
-        // Convert trailer URL to embed format if needed
-        if (trailerUrl && trailerUrl.includes('watch?v=')) {
-            const videoId = trailerUrl.split('v=')[1]?.split('&')[0];
-            if (videoId) trailerUrl = `https://www.youtube.com/embed/${videoId}`;
-        } else if (trailerUrl && trailerUrl.includes('youtu.be/')) {
-            const videoId = trailerUrl.split('youtu.be/')[1]?.split('?')[0];
-            if (videoId) trailerUrl = `https://www.youtube.com/embed/${videoId}`;
-        }
-
-        // Extract download links
-        const downloadLinks = [];
-        const seenLinks = new Set();
-
-        $('a').each((index, element) => {
-            const $link = $(element);
-            const href = $link.attr('href');
-            if (!href) return;
-
-            const text = $link.text().trim();
-            const parentText = $link.parent().text().trim();
-            const combinedText = (text + ' ' + parentText).toLowerCase();
-
-            // Strict filtering: must be a known download host or have specific path
-            const isDownloadHost = href.includes('downloadwella.com') || href.includes('nkiri.com/download') || href.includes('nkiri.ink/download') || href.includes('dl.thenkiri.com');
-            const isDownloadText = combinedText.includes('download') || combinedText.includes('episode') || combinedText.includes('server') || combinedText.includes('quality');
-
-            if (
-                isDownloadHost &&
-                isDownloadText &&
-                !href.includes('how-to-download') &&
-                !combinedText.includes('how to download') &&
-                !combinedText.includes('telegram') &&
-                !combinedText.includes('join') &&
-                !combinedText.includes('contact') &&
-                !href.endsWith('.png') && !href.endsWith('.jpg') && !href.endsWith('.jpeg')
-            ) {
-                if (!seenLinks.has(href)) {
-                    seenLinks.add(href);
-
-                    let label = text || 'Download Source';
-                    let group = 'Movie';
-
-                    // Better episode detection
-                    const epMatch = combinedText.match(/episode\s*(\d+)/i) || parentText.match(/Episode\s*(\d+)/i);
-                    if (epMatch) {
-                        group = `Episode ${epMatch[1]}`;
-                        label = `Download Episode ${epMatch[1]}`;
+                while (current.length && !current.is('h2, h3, div.elementor-widget')) {
+                    if (current.is('p')) {
+                        const text = current.text().trim();
+                        if (text && !text.toLowerCase().includes('download')) {
+                            synopsis += text + '\n\n';
+                        }
                     }
-
-                    downloadLinks.push({
-                        url: href,
-                        text: label,
-                        group: group,
-                        quality: extractQuality(combinedText, href)
-                    });
+                    current = current.next();
                 }
             }
-        });
 
-        // Extract file size
-        let fileSize = '';
-        $('p, div, span').each((index, element) => {
-            const text = $(element).text();
-            const sizeMatch = text.match(/(\d+\.?\d*\s?(MB|GB|KB))/i);
-            if (sizeMatch && !fileSize) {
-                fileSize = sizeMatch[0];
+            if (!synopsis) {
+                synopsis = $('.entry-content p').first().text().trim();
             }
-        });
 
-        // Extract image
-        const image = $('.wp-post-image, article img, .entry-content img').first().attr('src') || '';
+            // Extract trailer
+            let trailerUrl = '';
+            const videoWidget = $('.elementor-widget-video').first();
+            if (videoWidget.length) {
+                try {
+                    const settings = JSON.parse(videoWidget.attr('data-settings') || '{}');
+                    if (settings.youtube_url) {
+                        trailerUrl = settings.youtube_url;
+                    }
+                } catch (e) {
+                    console.error('Error parsing video settings:', e.message);
+                }
+            }
 
-        // Extract genres/tags
-        const genres = [];
-        $('.post-tags a, .tags a, a[rel="tag"]').each((index, element) => {
-            const genre = $(element).text().trim();
-            if (genre) genres.push(genre);
-        });
+            if (!trailerUrl) {
+                const ytIframe = $('iframe[src*="youtube.com"], iframe[src*="youtu.be"]').first();
+                if (ytIframe.length) {
+                    trailerUrl = ytIframe.attr('src');
+                }
+            }
 
-        const movieData = {
-            title,
-            synopsis: synopsis.trim(),
-            trailerUrl,
-            downloadLinks,
-            fileSize,
-            image,
-            genres: genres.slice(0, 5),
-            url: movieUrl
-        };
+            // Convert trailer URL to embed format if needed
+            if (trailerUrl && trailerUrl.includes('watch?v=')) {
+                const videoId = trailerUrl.split('v=')[1]?.split('&')[0];
+                if (videoId) trailerUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (trailerUrl && trailerUrl.includes('youtu.be/')) {
+                const videoId = trailerUrl.split('youtu.be/')[1]?.split('?')[0];
+                if (videoId) trailerUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
 
-        // Cache the results
-        setCachedData(cacheKey, movieData);
+            // Extract download links
+            const downloadLinks = [];
+            const seenLinks = new Set();
 
-        res.json({ success: true, movie: movieData, cached: false });
-    } catch (error) {
-        console.error('Error fetching movie details:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
+            $('a').each((index, element) => {
+                const $link = $(element);
+                const href = $link.attr('href');
+                if (!href) return;
+
+                const text = $link.text().trim();
+                const parentText = $link.parent().text().trim();
+                const combinedText = (text + ' ' + parentText).toLowerCase();
+
+                // Strict filtering: must be a known download host or have specific path
+                const isDownloadHost = href.includes('downloadwella.com') || href.includes('nkiri.com/download') || href.includes('nkiri.ink/download') || href.includes('dl.thenkiri.com');
+                const isDownloadText = combinedText.includes('download') || combinedText.includes('episode') || combinedText.includes('server') || combinedText.includes('quality');
+
+                if (
+                    isDownloadHost &&
+                    isDownloadText &&
+                    !href.includes('how-to-download') &&
+                    !combinedText.includes('how to download') &&
+                    !combinedText.includes('telegram') &&
+                    !combinedText.includes('join') &&
+                    !combinedText.includes('contact') &&
+                    !href.endsWith('.png') && !href.endsWith('.jpg') && !href.endsWith('.jpeg')
+                ) {
+                    if (!seenLinks.has(href)) {
+                        seenLinks.add(href);
+
+                        let label = text || 'Download Source';
+                        let group = 'Movie';
+
+                        // Better episode detection
+                        const epMatch = combinedText.match(/episode\s*(\d+)/i) || parentText.match(/Episode\s*(\d+)/i);
+                        if (epMatch) {
+                            group = `Episode ${epMatch[1]}`;
+                            label = `Download Episode ${epMatch[1]}`;
+                        }
+
+                        downloadLinks.push({
+                            url: href,
+                            text: label,
+                            group: group,
+                            quality: extractQuality(combinedText, href)
+                        });
+                    }
+                }
+            });
+
+            // Extract file size
+            let fileSize = '';
+            $('p, div, span').each((index, element) => {
+                const text = $(element).text();
+                const sizeMatch = text.match(/(\d+\.?\d*\s?(MB|GB|KB))/i);
+                if (sizeMatch && !fileSize) {
+                    fileSize = sizeMatch[0];
+                }
+            });
+
+            // Extract image
+            const image = $('.wp-post-image, article img, .entry-content img').first().attr('src') || '';
+
+            // Extract genres/tags
+            const genres = [];
+            $('.post-tags a, .tags a, a[rel="tag"]').each((index, element) => {
+                const genre = $(element).text().trim();
+                if (genre) genres.push(genre);
+            });
+
+            if (source === 'thenkiri' || !movieData) {
+                movieData = {
+                    title,
+                    synopsis: synopsis.trim(),
+                    trailerUrl,
+                    downloadLinks,
+                    fileSize,
+                    image,
+                    genres: genres.slice(0, 5),
+                    url: movieUrl,
+                    source: 'thenkiri'
+                };
+            }
+
+            // Cache the results
+            setCachedData(cacheKey, movieData);
+
+            res.json({ success: true, movie: movieData, cached: false });
+        } catch (error) {
+            console.error('Error fetching movie details:', error.message);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    });
 
 // Search movies
 app.get('/api/search', async (req, res) => {
@@ -310,35 +326,45 @@ app.get('/api/search', async (req, res) => {
 
         const searchUrl = `https://thenkiri.com/?s=${encodeURIComponent(query)}`;
 
-        const response = await axios.get(searchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
-
-        const $ = cheerio.load(response.data);
-        const movies = [];
-
-        $('article').each((index, element) => {
-            const $article = $(element);
-            const $title = $article.find('h2 a, h5 a').first();
-            const $image = $article.find('img').first();
-
-            if ($title.length) {
-                const title = $title.text().trim();
-                const movieUrl = $title.attr('href');
-                let imageUrl = $image.attr('src') || $image.attr('data-src') || '';
-
-                if (movieUrl && title) {
-                    movies.push({
-                        title,
-                        url: movieUrl,
-                        image: imageUrl,
-                        id: movieUrl.split('/').filter(Boolean).pop()
-                    });
+        const [nkiriResponse, fzMovies, o2TvSeries] = await Promise.allSettled([
+            axios.get(searchUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
-            }
-        });
+            }),
+            searchFzMovies(query),
+            searchO2TvSeries(query)
+        ]);
+
+        let movies = [];
+
+        // Parse TheNkiri Results
+        if (nkiriResponse.status === 'fulfilled') {
+            const $ = cheerio.load(nkiriResponse.value.data);
+            $('article').each((index, element) => {
+                const $article = $(element);
+                const $title = $article.find('h2 a, h5 a').first();
+                const $image = $article.find('img').first();
+                if ($title.length) {
+                    const title = $title.text().trim();
+                    const movieUrl = $title.attr('href');
+                    let imageUrl = $image.attr('src') || $image.attr('data-src') || '';
+                    if (movieUrl && title) {
+                        movies.push({
+                            title,
+                            url: movieUrl,
+                            image: imageUrl,
+                            id: movieUrl.split('/').filter(Boolean).pop(),
+                            source: 'thenkiri'
+                        });
+                    }
+                }
+            });
+        }
+
+        // Aggregate results from FzMovies and O2TvSeries
+        if (fzMovies.status === 'fulfilled') movies = movies.concat(fzMovies.value);
+        if (o2TvSeries.status === 'fulfilled') movies = movies.concat(o2TvSeries.value);
 
         res.json({ success: true, movies, query });
     } catch (error) {
