@@ -59,6 +59,9 @@ app.get('/api/movies', async (req, res) => {
         const category = req.query.category || 'home';
         const source = req.query.source;
         const page = parseInt(req.query.page) || 1;
+
+        console.log(`[API] /api/movies - Category: ${category}, Source: ${source}, Page: ${page}`);
+
         const cacheKey = `movies_${category}_source_${source}_page_${page}`;
 
         // Check cache first
@@ -180,15 +183,6 @@ app.get('/api/movies', async (req, res) => {
     }
 });
 
-// Cache the results
-setCachedData(cacheKey, movies);
-
-res.json({ success: true, movies, cached: false });
-    } catch (error) {
-    console.error('Error fetching movies:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-}
-});
 
 // Fetch download links for a specific movie
 app.get('/api/movie/:id', async (req, res) => {

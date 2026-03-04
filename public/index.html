@@ -123,20 +123,23 @@
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const API_URL = window.location.origin + '/api';
+        const API_URL = '/api';
 
         function MovieRow({ title, source, onMovieClick }) {
             const [rowMovies, setRowMovies] = useState([]);
             const [page, setPage] = useState(1);
             const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
             const [hasMore, setHasMore] = useState(true);
             const scrollRef = React.useRef(null);
 
             const fetchRowMovies = async () => {
                 if (loading || !hasMore) return;
                 setLoading(true);
+                setError(null);
                 try {
                     const response = await fetch(`${API_URL}/movies?source=${source}&page=${page}`);
+                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                     const data = await response.json();
                     if (data.success && data.movies.length > 0) {
                         setRowMovies(prev => {
@@ -151,6 +154,7 @@
                     }
                 } catch (e) {
                     console.error('Error fetching row movies:', e);
+                    setError(e.message);
                 } finally {
                     setLoading(false);
                 }
@@ -168,7 +172,7 @@
                 }
             };
 
-            if (rowMovies.length === 0 && !loading && !hasMore) return null;
+            if (rowMovies.length === 0 && !loading && !hasMore && !error) return null;
 
             return (
                 <div className="mb-10 last:mb-20">
@@ -176,6 +180,7 @@
                         <span className="w-1 h-8 bg-[#e50914] mr-3 rounded-full"></span>
                         {title}
                         {loading && <div className="ml-4 w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>}
+                        {error && <span className="ml-4 text-xs font-normal text-red-500 bg-red-500/10 px-2 py-1 rounded">Error: {error}</span>}
                     </h3>
                     <div className="relative group">
                         <button
