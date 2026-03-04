@@ -83,7 +83,7 @@ async function getO2TvSeriesDetails(seriesUrl) {
 
             if (!href) return;
 
-            const fullUrl = href.startsWith('http') ? href : `https://o2tvseries.app/${href}`;
+            const fullUrl = href.startsWith('http') ? href : `https://o2tvseries2.com/${href.startsWith('/') ? href.substring(1) : href}`;
 
             if (!seenLinks.has(fullUrl)) {
                 seenLinks.add(fullUrl);
@@ -96,7 +96,7 @@ async function getO2TvSeriesDetails(seriesUrl) {
                     text: text || 'Download Episode',
                     url: fullUrl,
                     quality,
-                    group: 'O2TvSeries Direct Download' // USP
+                    group: 'O2TvSeries Direct Download'
                 });
             }
         });
@@ -108,8 +108,8 @@ async function getO2TvSeriesDetails(seriesUrl) {
                 const text = $link.text().trim();
                 const href = $link.attr('href');
 
-                if (href && !href.includes('.jpg')) {
-                    const fullUrl = href.startsWith('http') ? href : `https://o2tvseries.app/${href}`;
+                if (href && !href.includes('.jpg') && !href.includes('.png')) {
+                    const fullUrl = href.startsWith('http') ? href : `https://o2tvseries2.com/${href.startsWith('/') ? href.substring(1) : href}`;
                     downloadLinks.push({
                         text: `Go To: ${text}`,
                         url: fullUrl,

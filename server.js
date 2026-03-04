@@ -289,11 +289,17 @@ app.get('/api/movie/:id', async (req, res) => {
                 const combinedText = (text + ' ' + parentText).toLowerCase();
 
                 // Strict filtering: must be a known download host or have specific path
-                const isDownloadHost = href.includes('downloadwella.com') || href.includes('nkiri.com/download') || href.includes('nkiri.ink/download') || href.includes('dl.thenkiri.com');
-                const isDownloadText = combinedText.includes('download') || combinedText.includes('episode') || combinedText.includes('server') || combinedText.includes('quality');
+                const isDownloadHost = href.includes('downloadwella.com') ||
+                    href.includes('nkiri.com/download') ||
+                    href.includes('nkiri.ink/download') ||
+                    href.includes('dl.thenkiri.com') ||
+                    href.includes('sabishares.com') ||
+                    href.includes('sabimesh.com');
+                const isDownloadText = combinedText.includes('download') || combinedText.includes('episode') || combinedText.includes('server') || combinedText.includes('quality') || combinedText.includes('mirror');
+                const isFileDownload = href.toLowerCase().endsWith('.mkv') || href.toLowerCase().endsWith('.mp4');
 
                 if (
-                    isDownloadHost &&
+                    (isDownloadHost || isFileDownload) &&
                     isDownloadText &&
                     !href.includes('how-to-download') &&
                     !combinedText.includes('how to download') &&

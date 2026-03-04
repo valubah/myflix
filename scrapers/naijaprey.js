@@ -62,17 +62,25 @@ async function getNaijaPreyDetails(movieUrl) {
 
         const downloadLinks = [];
         const seenLinks = new Set();
+        const blacklist = ['movies', 'series', 'adult', 'animation', 'crime', 'hollywood', 'action', 'adventure', 'comedy', 'drama', 'horror', 'thriller', 'romance', 'sci-fi', 'fantasy', 'mystery', 'documentary', 'biography', 'history', 'war', 'western', 'musical', 'music', 'family', 'sport', 'news', 'reality-tv', 'talk-show', 'game-show'];
 
         $('a[href*="download"], a[href*=".mp4"], a[href*=".mkv"], a.btn, a.download-button').each((i, el) => {
             const $link = $(el);
-            const text = $link.text().trim();
+            let text = $link.text().trim();
             const href = $link.attr('href');
 
             if (!href) return;
 
-            if (href.includes('google') || href.includes('ads') || href.includes('t.me')) return;
+            // Filter out internal site navigation and ads
+            if (href.includes('google') || href.includes('ads') || href.includes('t.me') || href.includes('facebook') || href.includes('twitter') || href.includes('whatsapp')) return;
 
-            const fullUrl = href.startsWith('http') ? href : `https://naijaprey.tv/${href}`;
+            // Filter out category links based on text
+            if (blacklist.some(word => text.toLowerCase() === word)) return;
+
+            // Filter out links that are just categories in the URL
+            if (href.includes('/category/')) return;
+
+            const fullUrl = href.startsWith('http') ? href : `https://naijaprey.tv/${href.startsWith('/') ? href.substring(1) : href}`;
 
             if (!seenLinks.has(fullUrl)) {
                 seenLinks.add(fullUrl);
