@@ -168,7 +168,7 @@
                 }
             };
 
-            if (rowMovies.length === 0 && !loading) return null;
+            if (rowMovies.length === 0 && !loading && !hasMore) return null;
 
             return (
                 <div className="mb-10 last:mb-20">
@@ -189,37 +189,46 @@
                             ref={scrollRef}
                             className="flex overflow-x-auto scrollbar-hide space-x-4 pb-6 scroll-smooth"
                         >
-                            {rowMovies.map((movie, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex-none w-36 sm:w-44 md:w-52 cursor-pointer transform transition-transform duration-300 hover:scale-105"
-                                    onClick={() => onMovieClick(movie)}
-                                >
-                                    <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-[2/3] shadow-lg">
-                                        <img
-                                            src={movie.image}
-                                            alt={movie.title}
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
-                                            onError={(e) => e.target.src = 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=No+Image'}
-                                        />
-                                        <div className="absolute top-2 right-2">
-                                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm uppercase ${movie.source === 'fzmovies' ? 'bg-[#ff9900] text-black' :
-                                                movie.source === 'o2tvseries' ? 'bg-[#007bff] text-white' :
-                                                    'bg-black/60 text-white'
-                                                }`}>
-                                                {movie.source === 'fzmovies' ? 'FzMovies' : movie.source === 'o2tvseries' ? 'O2TV' : ''}
-                                            </span>
-                                        </div>
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <div className="bg-[#e50914] rounded-full p-3 shadow-xl">
-                                                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                            {rowMovies.length === 0 && loading ? (
+                                [...Array(6)].map((_, i) => (
+                                    <div key={i} className="flex-none w-36 sm:w-44 md:w-52 animate-pulse">
+                                        <div className="bg-gray-800 rounded-lg aspect-[2/3] mb-3"></div>
+                                        <div className="h-4 bg-gray-800 rounded w-3/4"></div>
+                                    </div>
+                                ))
+                            ) : (
+                                rowMovies.map((movie, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex-none w-36 sm:w-44 md:w-52 cursor-pointer transform transition-transform duration-300 hover:scale-105"
+                                        onClick={() => onMovieClick(movie)}
+                                    >
+                                        <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-[2/3] shadow-lg">
+                                            <img
+                                                src={movie.image}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover"
+                                                loading="lazy"
+                                                onError={(e) => e.target.src = 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=No+Image'}
+                                            />
+                                            <div className="absolute top-2 right-2">
+                                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm uppercase ${movie.source === 'fzmovies' ? 'bg-[#ff9900] text-black' :
+                                                    movie.source === 'o2tvseries' ? 'bg-[#007bff] text-white' :
+                                                        'bg-black/60 text-white'
+                                                    }`}>
+                                                    {movie.source === 'fzmovies' ? 'FzMovies' : movie.source === 'o2tvseries' ? 'O2TV' : ''}
+                                                </span>
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <div className="bg-[#e50914] rounded-full p-3 shadow-xl">
+                                                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                                </div>
                                             </div>
                                         </div>
+                                        <h4 className="mt-3 text-xs md:text-sm font-medium line-clamp-2 text-gray-200 group-hover:text-white">{movie.title}</h4>
                                     </div>
-                                    <h4 className="mt-3 text-xs md:text-sm font-medium line-clamp-2 text-gray-200 group-hover:text-white">{movie.title}</h4>
-                                </div>
-                            ))}
+                                ))
+                            )}
                             {hasMore && (
                                 <div className="flex-none w-36 sm:w-44 md:w-52 flex items-center justify-center pr-4">
                                     <button
@@ -410,8 +419,8 @@
                                 <h1 className="text-[#e50914] text-3xl font-bold tracking-tight cursor-pointer" onClick={() => window.location.reload()}>
                                     MYFLIX
                                 </h1>
-                                <div className="hidden md:flex space-x-6">
-                                    {categories.slice(0, 6).map(cat => (
+                                <div className="hidden md:flex space-x-6 overflow-x-auto no-scrollbar scroll-smooth pr-4" style={{ maxWidth: 'calc(100vw - 450px)' }}>
+                                    {categories.map(cat => (
                                         <button
                                             key={cat.id}
                                             onClick={() => {
@@ -420,7 +429,7 @@
                                                 setSearchQuery('');
                                                 setCurrentPage(1);
                                             }}
-                                            className={`text-sm tracking-wide transition-all hover:scale-105 ${selectedCategory === cat.id
+                                            className={`text-sm tracking-wide transition-all hover:scale-105 whitespace-nowrap ${selectedCategory === cat.id
                                                 ? 'text-white font-bold border-b-2 border-[#e50914] pb-1'
                                                 : 'text-gray-400 hover:text-gray-200'
                                                 }`}

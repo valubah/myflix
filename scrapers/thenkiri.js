@@ -50,6 +50,44 @@ async function getLatestThenkiri(baseUrl = 'https://thenkiri.com/', page = 1) {
         console.error(`Thenkiri (${baseUrl}) Latest Error:`, error.message);
         return [];
     }
-}
+    async function searchThenkiri(baseUrl = 'https://thenkiri.ng/', query) {
+        try {
+            const url = `${baseUrl}?s=${encodeURIComponent(query)}`;
+            const { data } = await scraper.get(url);
+            const $ = cheerio.load(data);
+            const movies = [];
 
-module.exports = { getLatestThenkiri };
+            $('article').each((index, element) => {
+                const $article = $(element);
+                const $title = $article.find('h2 a, h5 a').first();
+                const $image = $article.find('img').first();
+
+                if ($title.length) {
+                    const title = $title.text().trim();
+                    const movieUrl = $title.attr('href');
+                    let imageUrl = $image.attr('src') || $image.attr('data-src') || '';
+
+                    if (!imageUrl || imageUrl.includes('lazy')) {
+                        imageUrl = $image.attr('data-lazy-src') || $image.attr('data-src') || '';
+                    }
+
+                    if (movieUrl && title) {
+                        movies.push({
+                            title,
+                            url: movieUrl,
+                            image: imageUrl,
+                            id: movieUrl.split('/').filter(Boolean).pop(),
+                            source: baseUrl.includes('.ng') ? 'thenkiri.ng' : 'thenkiri'
+                        });
+                    }
+                }
+            });
+
+            return movies;
+        } catch (error) {
+            console.error(`Thenkiri (${baseUrl}) Search Error:`, error.message);
+            return [];
+        }
+    }
+
+    module.exports = { getLatestThenkiri, searchThenkiri };
