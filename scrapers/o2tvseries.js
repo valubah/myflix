@@ -141,17 +141,25 @@ async function getLatestO2TvSeries(page = 1) {
         const $ = cheerio.load(data);
         const movies = [];
 
+        const noise = ['list all', 'message us', 'telegram', 'facebook', 'twitter', 'o2tvseries4u.com', 'home', 'download', 'contact'];
+
         $('div.data, div.data_list, a').each((i, el) => {
             const $el = $(el);
             let title = $el.text().trim();
             let url = $el.attr('href') || $el.find('a').attr('href');
 
-            if (url && url.includes('/') && title && title.length > 3 && !title.includes('Download') && !title.includes('Home')) {
+            if (url && url.includes('/') && title && title.length > 3) {
+                const titleLower = title.toLowerCase();
+
+                // Filter out noise/navigation links
+                if (noise.some(word => titleLower.includes(word))) return;
+
                 const fullUrl = url.startsWith('http') ? url : `https://o2tvseries2.com${url.startsWith('/') ? '' : '/'}${url}`;
 
                 if (!movies.find(m => m.url === fullUrl)) {
-                    // Premium branded placeholder for O2TvSeries
-                    const placeholder = `https://via.placeholder.com/400x600/121212/e50914?text=O2TvSeries+%7C+${encodeURIComponent(title.split(' ').slice(0, 3).join('+'))}`;
+                    // Use dummyimage.com as it's often more reliable than via.placeholder
+                    const displayTitle = title.split(' ').slice(0, 3).join(' ');
+                    const placeholder = `https://dummyimage.com/400x600/121212/e50914.png&text=O2|${encodeURIComponent(displayTitle)}`;
 
                     movies.push({
                         id: Buffer.from(fullUrl).toString('base64'),
@@ -164,7 +172,7 @@ async function getLatestO2TvSeries(page = 1) {
             }
         });
 
-        return movies;
+        return movies.slice(0, 20); // Limit to top results
     } catch (error) {
         console.error('O2TvSeries Latest Error:', error.message);
         return [];

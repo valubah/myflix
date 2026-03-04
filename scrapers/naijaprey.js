@@ -30,7 +30,7 @@ async function searchNaijaPrey(query) {
                     id: Buffer.from(fullUrl).toString('base64'),
                     title: title.replace('Download', '').trim(),
                     url: fullUrl,
-                    image: image || 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=NaijaPrey',
+                    image: image || 'https://dummyimage.com/400x600/121212/e50914.png&text=NaijaPrey',
                     source: 'naijaprey'
                 });
             }

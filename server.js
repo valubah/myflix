@@ -103,9 +103,15 @@ app.get('/api/movies', async (req, res) => {
                 movies = await searchThenkiri('https://thenkiri.ng/', 'Filipino');
             }
         } else if (category === 'adult') {
-            // Special handling for adult category to ensure Filipino content
-            const { searchThenkiri } = require('./scrapers/thenkiri');
-            movies = await searchThenkiri('https://thenkiri.ng/', 'Filipino');
+            // Filipinos movies on thenkiri.ng are 18+
+            // Try the tag first as it's more accurate
+            movies = await getLatestThenkiri('https://thenkiri.ng/tag/filipino/', page);
+            
+            // Fallback to search if tag is empty
+            if (movies.length === 0) {
+                const { searchThenkiri } = require('./scrapers/thenkiri');
+                movies = await searchThenkiri('https://thenkiri.ng/', 'Filipino');
+            }
         } else if (category === 'home' && page === 1) {
             // Default home aggregation if no source specified
             const results = await Promise.allSettled([

@@ -37,7 +37,7 @@ async function searchFzMovies(query) {
                     id: Buffer.from(fullUrl).toString('base64'), // Use base64 URL as ID for safe routing
                     title: title.replace('...', '').trim(),
                     url: fullUrl,
-                    image: image || 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=No+Image',
+                            image: 'https://dummyimage.com/400x600/121212/e50914.png&text=FzMovies',
                     source: 'fzmovies'
                 });
             }
@@ -164,7 +164,7 @@ async function getLatestFzMovies(page = 1) {
                     id: Buffer.from(fullUrl).toString('base64'),
                     title: title.replace('...', '').trim(),
                     url: fullUrl,
-                    image: image || 'https://via.placeholder.com/200x300/1a1a1a/ffffff?text=FzMovies',
+                    image: image || 'https://dummyimage.com/400x600/121212/e50914.png&text=FzMovies',
                     source: 'fzmovies'
                 });
             }
