@@ -8,9 +8,14 @@ const scraper = axios.create({
     timeout: 10000
 });
 
-async function getLatestThenkiri(baseUrl = 'https://thenkiri.com/') {
+async function getLatestThenkiri(baseUrl = 'https://thenkiri.com/', page = 1) {
     try {
-        const { data } = await scraper.get(baseUrl);
+        let url = baseUrl;
+        if (page > 1) {
+            url = baseUrl.endsWith('/') ? `${baseUrl}page/${page}/` : `${baseUrl}/page/${page}/`;
+        }
+
+        const { data } = await scraper.get(url);
         const $ = cheerio.load(data);
         const movies = [];
 
@@ -40,7 +45,7 @@ async function getLatestThenkiri(baseUrl = 'https://thenkiri.com/') {
             }
         });
 
-        return movies.slice(0, 10);
+        return movies;
     } catch (error) {
         console.error(`Thenkiri (${baseUrl}) Latest Error:`, error.message);
         return [];

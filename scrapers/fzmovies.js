@@ -140,9 +140,10 @@ async function getFzMovieDetails(movieUrl) {
     }
 }
 
-async function getLatestFzMovies() {
+async function getLatestFzMovies(page = 1) {
     try {
-        const { data } = await scraper.get('https://www.fzmovies.net/');
+        const url = page > 1 ? `https://www.fzmovies.net/latest-movies.php?page=${page}` : 'https://www.fzmovies.net/';
+        const { data } = await scraper.get(url);
         const $ = cheerio.load(data);
         const movies = [];
 
@@ -169,7 +170,7 @@ async function getLatestFzMovies() {
             }
         });
 
-        return movies.slice(0, 10);
+        return movies;
     } catch (error) {
         console.error('FzMovies Latest Error:', error.message);
         return [];

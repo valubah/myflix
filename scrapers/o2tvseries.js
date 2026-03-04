@@ -134,9 +134,10 @@ async function getO2TvSeriesDetails(seriesUrl) {
     }
 }
 
-async function getLatestO2TvSeries() {
+async function getLatestO2TvSeries(page = 1) {
     try {
-        const { data } = await scraper.get('https://o2tvseries.app');
+        const url = page > 1 ? `https://o2tvseries2.com/top-downloads/page/${page}/` : 'https://o2tvseries2.com';
+        const { data } = await scraper.get(url);
         const $ = cheerio.load(data);
         const movies = [];
 
@@ -160,7 +161,7 @@ async function getLatestO2TvSeries() {
             }
         });
 
-        return movies.slice(0, 10);
+        return movies;
     } catch (error) {
         console.error('O2TvSeries Latest Error:', error.message);
         return [];

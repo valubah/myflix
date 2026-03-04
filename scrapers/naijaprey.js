@@ -104,9 +104,10 @@ async function getNaijaPreyDetails(movieUrl) {
     }
 }
 
-async function getLatestNaijaPrey() {
+async function getLatestNaijaPrey(page = 1) {
     try {
-        const { data } = await scraper.get('https://naijaprey.tv/');
+        const url = page > 1 ? `https://naijaprey.tv/page/${page}/` : 'https://naijaprey.tv/';
+        const { data } = await scraper.get(url);
         const $ = cheerio.load(data);
         const movies = [];
 
@@ -130,7 +131,7 @@ async function getLatestNaijaPrey() {
             }
         });
 
-        return movies.slice(0, 10);
+        return movies;
     } catch (error) {
         console.error('NaijaPrey Latest Error:', error.message);
         return [];
