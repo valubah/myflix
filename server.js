@@ -1,11 +1,10 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const cors = require('cors');
-
 // Import new scrapers
 const { searchFzMovies, getFzMovieDetails } = require('./scrapers/fzmovies');
 const { searchO2TvSeries, getO2TvSeriesDetails } = require('./scrapers/o2tvseries');
+const { searchNaijaPrey, getNaijaPreyDetails } = require('./scrapers/naijaprey');
 
 const app = express();
 const PORT = 3000;
@@ -157,6 +156,8 @@ app.get('/api/movie/:id', async (req, res) => {
             movieData = await getFzMovieDetails(movieUrl);
         } else if (source === 'o2tvseries') {
             movieData = await getO2TvSeriesDetails(movieUrl);
+        } else if (source === 'naijaprey') {
+            movieData = await getNaijaPreyDetails(movieUrl);
         } else {
             // Default TheNkiri scraper
             const response = await axios.get(movieUrl, {
@@ -304,16 +305,17 @@ app.get('/api/movie/:id', async (req, res) => {
                     source: 'thenkiri'
                 };
             }
-
-            // Cache the results
-            setCachedData(cacheKey, movieData);
-
-            res.json({ success: true, movie: movieData, cached: false });
-        } catch (error) {
-            console.error('Error fetching movie details:', error.message);
-            res.status(500).json({ success: false, error: error.message });
         }
-    });
+
+        // Cache the results
+        setCachedData(cacheKey, movieData);
+
+        res.json({ success: true, movie: movieData, cached: false });
+    } catch (error) {
+        console.error('Error fetching movie details:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 // Search movies
 app.get('/api/search', async (req, res) => {
@@ -326,14 +328,15 @@ app.get('/api/search', async (req, res) => {
 
         const searchUrl = `https://thenkiri.com/?s=${encodeURIComponent(query)}`;
 
-        const [nkiriResponse, fzMovies, o2TvSeries] = await Promise.allSettled([
+        const [nkiriResponse, fzMovies, o2TvSeries, naijaPrey] = await Promise.allSettled([
             axios.get(searchUrl, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
             }),
             searchFzMovies(query),
-            searchO2TvSeries(query)
+            searchO2TvSeries(query),
+            searchNaijaPrey(query)
         ]);
 
         let movies = [];
@@ -362,9 +365,10 @@ app.get('/api/search', async (req, res) => {
             });
         }
 
-        // Aggregate results from FzMovies and O2TvSeries
+        // Aggregate results from FzMovies, O2TvSeries, and NaijaPrey
         if (fzMovies.status === 'fulfilled') movies = movies.concat(fzMovies.value);
         if (o2TvSeries.status === 'fulfilled') movies = movies.concat(o2TvSeries.value);
+        if (naijaPrey.status === 'fulfilled') movies = movies.concat(naijaPrey.value);
 
         res.json({ success: true, movies, query });
     } catch (error) {
